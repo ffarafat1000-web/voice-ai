@@ -141,6 +141,113 @@
   }
   .bolt-icon { fill: #b0b0b0; stroke: none; }
   .icon-btn:active .bolt-icon { fill: #ff0080; }
+
+  /* ============ স্ক্যানার ============ */
+  .scanner {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease;
+    overflow: hidden; background: #000;
+  }
+  .scanner.active { opacity: 1; pointer-events: auto; }
+
+  #cameraVideo {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; z-index: 1; display: none;
+  }
+  #cameraVideo.on { display: block; }
+
+  .scanner-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255, 0, 128, 0.08), transparent 60%),
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 40px 40px, 40px 40px;
+  }
+
+  .camera-mask {
+    position: absolute; inset: 0; z-index: 2;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.4s ease;
+    background: radial-gradient(circle at center, transparent 0%, transparent 30%, rgba(0,0,0,0.7) 45%, rgba(0,0,0,0.9) 60%);
+  }
+  .camera-mask.on { opacity: 1; }
+
+  .scan-close {
+    position: absolute; top: 30px; right: 24px;
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    cursor: pointer; backdrop-filter: blur(10px);
+    z-index: 10;
+  }
+  .scan-close svg { width: 18px; height: 18px; stroke: #fff; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+
+  .viewfinder {
+    width: 260px; height: 260px;
+    position: relative; z-index: 5;
+  }
+  .viewfinder::before, .viewfinder::after,
+  .viewfinder .corner-bl, .viewfinder .corner-br {
+    content: ''; position: absolute;
+    width: 40px; height: 40px;
+    border-color: #ff0080; border-style: solid;
+    filter: drop-shadow(0 0 8px #ff0080);
+  }
+  .viewfinder::before { top: 0; left: 0; border-width: 3px 0 0 3px; border-top-left-radius: 12px; }
+  .viewfinder::after { top: 0; right: 0; border-width: 3px 3px 0 0; border-top-right-radius: 12px; }
+  .viewfinder .corner-bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-bottom-left-radius: 12px; }
+  .viewfinder .corner-br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-bottom-right-radius: 12px; }
+
+  .scan-line {
+    position: absolute; top: 0; left: 10px; right: 10px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #ff0080, #a020f0, #ff0080, transparent);
+    box-shadow: 0 0 15px #ff0080, 0 0 30px #ff0080;
+    border-radius: 99px;
+    animation: scan 2.2s ease-in-out infinite;
+  }
+  @keyframes scan {
+    0% { top: 10px; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: calc(100% - 12px); opacity: 0; }
+  }
+
+  .camera-trigger {
+    position: absolute; bottom: 90px; left: 50%;
+    transform: translateX(-50%);
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.2);
+    display: grid; place-items: center;
+    cursor: pointer; backdrop-filter: blur(10px);
+    z-index: 10;
+  }
+  .camera-trigger svg {
+    width: 30px; height: 30px;
+    stroke: #ffffff; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round; fill: none;
+  }
+  .camera-trigger.on { opacity: 0; pointer-events: none; }
+
+  .cam-error {
+    position: absolute; bottom: 40px; left: 50%;
+    transform: translateX(-50%);
+    color: #ff5577; font-size: 13px;
+    text-align: center; z-index: 20; display: none;
+    padding: 8px 16px;
+    background: rgba(255,0,85,0.1);
+    border-radius: 20px;
+    border: 1px solid rgba(255,0,85,0.3);
+  }
 </style>
 </head>
 <body>
@@ -184,7 +291,7 @@
         <path d="M5 10v10h14V10"></path>
       </svg>
     </div>
-    <div class="icon-btn" aria-label="Camera">
+    <div class="icon-btn" id="cameraBtn" aria-label="Camera">
       <svg viewBox="0 0 24 24">
         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
         <circle cx="12" cy="13" r="4"></circle>
@@ -212,6 +319,31 @@
     </div>
   </div>
 
+  <!-- ============ স্ক্যানার ============ -->
+  <div class="scanner" id="scanner">
+    <div class="scanner-bg"></div>
+    <video id="cameraVideo" autoplay playsinline muted></video>
+    <div class="camera-mask" id="cameraMask"></div>
+    <div class="scan-close" id="closeScanner">
+      <svg viewBox="0 0 24 24">
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+      </svg>
+    </div>
+    <div class="viewfinder">
+      <div class="corner-bl"></div>
+      <div class="corner-br"></div>
+      <div class="scan-line"></div>
+    </div>
+    <div class="camera-trigger" id="cameraTrigger">
+      <svg viewBox="0 0 24 24">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+        <circle cx="12" cy="13" r="4"></circle>
+      </svg>
+    </div>
+    <div class="cam-error" id="camError">ক্যামেরা চালু করা যায়নি। অনুমতি দিন।</div>
+  </div>
+
 <script>
   var inputBox = document.getElementById('inputBox');
   var sendBtn = document.getElementById('sendBtn');
@@ -220,6 +352,57 @@
   var orbWrapper = document.getElementById('orbWrapper');
   var voiceCaption = document.getElementById('voiceCaption');
 
+  /* ============ ক্যামেরা স্ক্যানার ============ */
+  var cameraBtn = document.getElementById('cameraBtn');
+  var scanner = document.getElementById('scanner');
+  var closeScanner = document.getElementById('closeScanner');
+  var cameraVideo = document.getElementById('cameraVideo');
+  var cameraMask = document.getElementById('cameraMask');
+  var cameraTrigger = document.getElementById('cameraTrigger');
+  var camError = document.getElementById('camError');
+  var cameraStream = null;
+
+  cameraBtn.addEventListener('click', function() {
+    scanner.classList.add('active');
+  });
+
+  closeScanner.addEventListener('click', function() {
+    scanner.classList.remove('active');
+    stopCamera();
+  });
+
+  async function startCamera() {
+    camError.style.display = 'none';
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      cameraVideo.srcObject = cameraStream;
+      await cameraVideo.play();
+      cameraVideo.classList.add('on');
+      cameraMask.classList.add('on');
+      cameraTrigger.classList.add('on');
+    } catch (err) {
+      console.error('Camera error:', err);
+      camError.style.display = 'block';
+    }
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(function(t) { t.stop(); });
+      cameraStream = null;
+    }
+    cameraVideo.srcObject = null;
+    cameraVideo.classList.remove('on');
+    cameraMask.classList.remove('on');
+    cameraTrigger.classList.remove('on');
+  }
+
+  cameraTrigger.addEventListener('click', startCamera);
+
+  /* ============ ভয়েস ============ */
   var recognition = null;
   var isVoiceActive = false;
   var femaleVoice = null;
@@ -265,9 +448,7 @@
   setTimeout(loadVoices, 3000);
 
   function speakNow(text, onEnd) {
-    try {
-      speechSynthesis.cancel();
-    } catch (e) {}
+    try { speechSynthesis.cancel(); } catch (e) {}
 
     var warmup = new SpeechSynthesisUtterance(' ');
     warmup.volume = 0;
@@ -400,6 +581,7 @@
     });
   });
 
+  /* ============ মেসেজ ============ */
   function autoResize() {
     inputBox.style.height = 'auto';
     inputBox.style.height = Math.min(inputBox.scrollHeight, 120) + 'px';
@@ -435,7 +617,14 @@
       sendMessage();
     }
   });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      scanner.classList.remove('active');
+      stopCamera();
+    }
+  });
 </script>
 
 </body>
-  </html>
+</html>
