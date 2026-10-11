@@ -14,6 +14,7 @@
   }
   body { min-height: 100dvh; position: relative; }
 
+  /* ============ হোম স্ক্রিন ============ */
   .orb-wrapper {
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%) scale(0.6);
@@ -142,71 +143,125 @@
   .bolt-icon { fill: #b0b0b0; stroke: none; }
   .icon-btn:active .bolt-icon { fill: #ff0080; }
 
-  /* ============ স্ক্যানার ============ */
+  /* ============ স্ক্যানার — ফুল স্ক্রিন ============ */
   .scanner {
-    position: fixed; inset: 0; z-index: 100;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.3s ease;
-    overflow: hidden; background: #000;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw; height: 100vh;
+    z-index: 9999;
+    background: #000;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
   }
-  .scanner.active { opacity: 1; pointer-events: auto; }
+  .scanner.active { display: flex; }
 
+  /* ক্যামেরা ভিডিও — পুরো স্ক্রিন জুড়ে */
   #cameraVideo {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover; z-index: 1; display: none;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    background: #000;
   }
-  #cameraVideo.on { display: block; }
 
+  /* ক্যামেরা চালু না হলে কালো ব্যাকগ্রাউন্ড */
   .scanner-bg {
-    position: absolute; inset: 0; z-index: 0;
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0;
     background:
-      radial-gradient(circle at 50% 50%, rgba(255, 0, 128, 0.08), transparent 60%),
-      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      radial-gradient(circle at 50% 50%, rgba(255, 0, 128, 0.15), transparent 60%),
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
     background-size: 100% 100%, 40px 40px, 40px 40px;
   }
 
+  /* চারপাশের অন্ধকার মাস্ক (ক্যামেরা চালু হলে) */
   .camera-mask {
-    position: absolute; inset: 0; z-index: 2;
-    pointer-events: none; opacity: 0;
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0;
     transition: opacity 0.4s ease;
-    background: radial-gradient(circle at center, transparent 0%, transparent 30%, rgba(0,0,0,0.7) 45%, rgba(0,0,0,0.9) 60%);
+    background: radial-gradient(
+      circle at center,
+      transparent 0%,
+      transparent 28%,
+      rgba(0, 0, 0, 0.55) 40%,
+      rgba(0, 0, 0, 0.85) 60%
+    );
   }
   .camera-mask.on { opacity: 1; }
 
+  /* ক্লোজ বাটন */
   .scan-close {
-    position: absolute; top: 30px; right: 24px;
-    width: 40px; height: 40px;
+    position: absolute;
+    top: 30px; right: 24px;
+    width: 44px; height: 44px;
     display: grid; place-items: center;
     border-radius: 50%;
-    background: rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.2);
-    cursor: pointer; backdrop-filter: blur(10px);
-    z-index: 10;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.25);
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    z-index: 20;
   }
-  .scan-close svg { width: 18px; height: 18px; stroke: #fff; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+  .scan-close:active { transform: scale(0.9); }
+  .scan-close svg {
+    width: 20px; height: 20px;
+    stroke: #fff; stroke-width: 2.5;
+    fill: none; stroke-linecap: round;
+  }
 
+  /* ভিউফাইন্ডার — মাঝখানে গোলাপি ফ্রেম */
   .viewfinder {
+    position: relative;
     width: 260px; height: 260px;
-    position: relative; z-index: 5;
+    z-index: 5;
+    pointer-events: none;
   }
-  .viewfinder::before, .viewfinder::after,
-  .viewfinder .corner-bl, .viewfinder .corner-br {
-    content: ''; position: absolute;
-    width: 40px; height: 40px;
-    border-color: #ff0080; border-style: solid;
-    filter: drop-shadow(0 0 8px #ff0080);
+  .viewfinder::before,
+  .viewfinder::after,
+  .viewfinder .corner-bl,
+  .viewfinder .corner-br {
+    content: '';
+    position: absolute;
+    width: 42px; height: 42px;
+    border-color: #ff0080;
+    border-style: solid;
+    filter: drop-shadow(0 0 10px #ff0080);
   }
-  .viewfinder::before { top: 0; left: 0; border-width: 3px 0 0 3px; border-top-left-radius: 12px; }
-  .viewfinder::after { top: 0; right: 0; border-width: 3px 3px 0 0; border-top-right-radius: 12px; }
-  .viewfinder .corner-bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-bottom-left-radius: 12px; }
-  .viewfinder .corner-br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-bottom-right-radius: 12px; }
+  .viewfinder::before {
+    top: 0; left: 0;
+    border-width: 4px 0 0 4px;
+    border-top-left-radius: 14px;
+  }
+  .viewfinder::after {
+    top: 0; right: 0;
+    border-width: 4px 4px 0 0;
+    border-top-right-radius: 14px;
+  }
+  .viewfinder .corner-bl {
+    bottom: 0; left: 0;
+    border-width: 0 0 4px 4px;
+    border-bottom-left-radius: 14px;
+  }
+  .viewfinder .corner-br {
+    bottom: 0; right: 0;
+    border-width: 0 4px 4px 0;
+    border-bottom-right-radius: 14px;
+  }
 
+  /* স্ক্যান লাইন */
   .scan-line {
-    position: absolute; top: 0; left: 10px; right: 10px;
+    position: absolute;
+    top: 0; left: 15px; right: 15px;
     height: 2px;
     background: linear-gradient(90deg, transparent, #ff0080, #a020f0, #ff0080, transparent);
     box-shadow: 0 0 15px #ff0080, 0 0 30px #ff0080;
@@ -220,33 +275,51 @@
     100% { top: calc(100% - 12px); opacity: 0; }
   }
 
+  /* বড় ক্যামেরা ট্রিগার বাটন (স্ক্যানারে) */
   .camera-trigger {
-    position: absolute; bottom: 90px; left: 50%;
+    position: absolute;
+    bottom: 90px;
+    left: 50%;
     transform: translateX(-50%);
-    width: 70px; height: 70px;
+    width: 76px; height: 76px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.05);
-    border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.1);
+    border: 3px solid rgba(255,255,255,0.3);
     display: grid; place-items: center;
-    cursor: pointer; backdrop-filter: blur(10px);
-    z-index: 10;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    z-index: 20;
+    box-shadow: 0 0 30px rgba(255, 0, 128, 0.3);
+  }
+  .camera-trigger:active {
+    transform: translateX(-50%) scale(0.9);
+    background: rgba(255, 0, 128, 0.3);
+    border-color: #ff0080;
   }
   .camera-trigger svg {
-    width: 30px; height: 30px;
+    width: 34px; height: 34px;
     stroke: #ffffff; stroke-width: 2;
-    stroke-linecap: round; stroke-linejoin: round; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+    fill: none;
+    filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));
   }
-  .camera-trigger.on { opacity: 0; pointer-events: none; }
+  .camera-trigger.on { display: none; }
 
+  /* ক্যামেরা এরর */
   .cam-error {
-    position: absolute; bottom: 40px; left: 50%;
+    position: absolute;
+    bottom: 40px; left: 50%;
     transform: translateX(-50%);
-    color: #ff5577; font-size: 13px;
-    text-align: center; z-index: 20; display: none;
-    padding: 8px 16px;
-    background: rgba(255,0,85,0.1);
+    color: #ff5577;
+    font-size: 13px;
+    text-align: center;
+    z-index: 20;
+    display: none;
+    padding: 10px 18px;
+    background: rgba(255,0,85,0.15);
     border-radius: 20px;
     border: 1px solid rgba(255,0,85,0.3);
+    backdrop-filter: blur(10px);
   }
 </style>
 </head>
@@ -319,28 +392,32 @@
     </div>
   </div>
 
-  <!-- ============ স্ক্যানার ============ -->
+  <!-- ============ ক্যামেরা স্ক্যানার — ফুল স্ক্রিন ============ -->
   <div class="scanner" id="scanner">
     <div class="scanner-bg"></div>
     <video id="cameraVideo" autoplay playsinline muted></video>
     <div class="camera-mask" id="cameraMask"></div>
+
     <div class="scan-close" id="closeScanner">
       <svg viewBox="0 0 24 24">
         <line x1="6" y1="6" x2="18" y2="18"></line>
         <line x1="18" y1="6" x2="6" y2="18"></line>
       </svg>
     </div>
+
     <div class="viewfinder">
       <div class="corner-bl"></div>
       <div class="corner-br"></div>
       <div class="scan-line"></div>
     </div>
+
     <div class="camera-trigger" id="cameraTrigger">
       <svg viewBox="0 0 24 24">
         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
         <circle cx="12" cy="13" r="4"></circle>
       </svg>
     </div>
+
     <div class="cam-error" id="camError">ক্যামেরা চালু করা যায়নি। অনুমতি দিন।</div>
   </div>
 
@@ -362,25 +439,31 @@
   var camError = document.getElementById('camError');
   var cameraStream = null;
 
+  /* ২ নাম্বার বাটন — স্ক্যানার খুলুন */
   cameraBtn.addEventListener('click', function() {
     scanner.classList.add('active');
   });
 
+  /* ক্লোজ বাটন — স্ক্যানার বন্ধ */
   closeScanner.addEventListener('click', function() {
     scanner.classList.remove('active');
     stopCamera();
   });
 
+  /* ক্যামেরা চালু */
   async function startCamera() {
     camError.style.display = 'none';
     try {
       cameraStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
         audio: false
       });
       cameraVideo.srcObject = cameraStream;
       await cameraVideo.play();
-      cameraVideo.classList.add('on');
       cameraMask.classList.add('on');
       cameraTrigger.classList.add('on');
     } catch (err) {
@@ -389,17 +472,18 @@
     }
   }
 
+  /* ক্যামেরা বন্ধ */
   function stopCamera() {
     if (cameraStream) {
       cameraStream.getTracks().forEach(function(t) { t.stop(); });
       cameraStream = null;
     }
     cameraVideo.srcObject = null;
-    cameraVideo.classList.remove('on');
     cameraMask.classList.remove('on');
     cameraTrigger.classList.remove('on');
   }
 
+  /* ভিতরের বাটনে ট্যাপ — আসল ক্যামেরা চালু */
   cameraTrigger.addEventListener('click', startCamera);
 
   /* ============ ভয়েস ============ */
@@ -412,32 +496,25 @@
     if (voices.length === 0) return;
 
     for (var i = 0; i < voices.length; i++) {
-      var v = voices[i];
-      if (v.lang && v.lang.indexOf('bn') === 0) {
-        femaleVoice = v;
-        break;
+      if (voices[i].lang && voices[i].lang.indexOf('bn') === 0) {
+        femaleVoice = voices[i]; break;
       }
     }
     if (!femaleVoice) {
       for (var i = 0; i < voices.length; i++) {
-        var v = voices[i];
-        if (v.lang && v.lang.indexOf('hi') === 0) {
-          femaleVoice = v;
-          break;
+        if (voices[i].lang && voices[i].lang.indexOf('hi') === 0) {
+          femaleVoice = voices[i]; break;
         }
       }
     }
     if (!femaleVoice) {
       for (var i = 0; i < voices.length; i++) {
-        var v = voices[i];
-        if (/female|aria|jenny|samantha|zira|heera|swara/i.test(v.name)) {
-          femaleVoice = v;
-          break;
+        if (/female|aria|jenny|samantha|zira|heera|swara/i.test(voices[i].name)) {
+          femaleVoice = voices[i]; break;
         }
       }
     }
     if (!femaleVoice && voices.length > 0) femaleVoice = voices[0];
-    console.log('Voice:', femaleVoice ? femaleVoice.name + ' ' + femaleVoice.lang : 'none');
   }
 
   speechSynthesis.onvoiceschanged = loadVoices;
@@ -471,13 +548,9 @@
     voiceCaption.textContent = text;
 
     u.onend = function() { if (onEnd) onEnd(); };
-    u.onerror = function(e) {
-      console.log('TTS error', e);
-      if (onEnd) onEnd();
-    };
+    u.onerror = function() { if (onEnd) onEnd(); };
 
     try { speechSynthesis.speak(u); } catch (e) {}
-    console.log('Speaking:', text);
   }
 
   function stopVoice() {
@@ -524,11 +597,8 @@
 
     recognition.onend = function() {
       if (!isVoiceActive) return;
-      if (finalText.trim()) {
-        respondToUser(finalText.trim());
-      } else {
-        if (isVoiceActive) setTimeout(startListening, 500);
-      }
+      if (finalText.trim()) respondToUser(finalText.trim());
+      else if (isVoiceActive) setTimeout(startListening, 500);
     };
 
     try { recognition.start(); } catch (e) {}
@@ -538,25 +608,21 @@
     var lower = text.toLowerCase();
     var reply = '';
 
-    if (/হ্যালো|হাই|hello|hi|নমস্কার/.test(lower)) {
-      reply = 'হ্যালো! আমি মাইরা। কেমন আছেন?';
-    } else if (/কেমন আছ|how are/.test(lower)) {
-      reply = 'আমি ভালো আছি! আপনি কেমন আছেন?';
-    } else if (/নাম|name|তুমি কে/.test(lower)) {
-      reply = 'আমার নাম মাইরা।';
-    } else if (/সময়|time/.test(lower)) {
+    if (/হ্যালো|হাই|hello|hi|নমস্কার/.test(lower)) reply = 'হ্যালো! আমি মাইরা। কেমন আছেন?';
+    else if (/কেমন আছ|how are/.test(lower)) reply = 'আমি ভালো আছি! আপনি কেমন আছেন?';
+    else if (/নাম|name|তুমি কে/.test(lower)) reply = 'আমার নাম মাইরা।';
+    else if (/সময়|time/.test(lower)) {
       var n = new Date();
       reply = 'এখন ' + n.getHours() + 'টা ' + n.getMinutes() + ' মিনিট।';
-    } else if (/ধন্যবাদ|thank/.test(lower)) {
-      reply = 'আপনাকে স্বাগতম!';
-    } else if (/বাই|bye|বিদায়/.test(lower)) {
+    }
+    else if (/ধন্যবাদ|thank/.test(lower)) reply = 'আপনাকে স্বাগতম!';
+    else if (/বাই|bye|বিদায়/.test(lower)) {
       reply = 'বিদায়! আবার কথা হবে।';
       speakNow(reply);
       setTimeout(stopVoice, 3000);
       return;
-    } else {
-      reply = 'আপনি বললেন: ' + text + '।';
     }
+    else reply = 'আপনি বললেন: ' + text + '।';
 
     speakNow(reply, function() {
       if (isVoiceActive) setTimeout(startListening, 500);
@@ -564,10 +630,7 @@
   }
 
   voiceBtn.addEventListener('click', function() {
-    if (isVoiceActive) {
-      stopVoice();
-      return;
-    }
+    if (isVoiceActive) { stopVoice(); return; }
 
     isVoiceActive = true;
     orbWrapper.classList.add('active');
@@ -599,12 +662,10 @@
   function sendMessage() {
     var t = inputBox.value.trim();
     if (!t) return;
-
     addMessage(t, 'user');
     inputBox.value = '';
     inputBox.style.height = 'auto';
     inputBox.focus();
-
     var reply = 'আপনি বললেন: ' + t;
     addMessage('🤖 ' + reply, 'bot');
     speakNow(reply);
