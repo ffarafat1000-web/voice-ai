@@ -222,58 +222,80 @@
 
   let recognition = null;
   let isVoiceActive = false;
-
-  /* ===== ফ্রি Web Speech API কণ্ঠ ===== */
   let femaleVoice = null;
+  let audioUnlocked = false;
 
-  function pickBestVoice() {
-    const voices = window.speechSynthesis.getVoices();
-    const prefs = [
-      'Microsoft Aria Online (Natural)',
-      'Microsoft Jenny Online (Natural)',
-      'Microsoft Michelle Online (Natural)',
-      'Microsoft Ana Online (Natural)',
-      'Google UK English Female',
-      'Google US English',
-      'Samantha', 'Karen', 'Moira', 'Tessa'
-    ];
-    for (const name of prefs) {
-      const f = voices.find(v => v.name === name);
-      if (f) return f;
-    }
-    const bn = voices.find(v => v.lang.startsWith('bn'));
-    if (bn) return bn;
-    const female = voices.find(v => /female|zira|samantha/i.test(v.name));
-    return female || voices[0];
+  /* ============ ভয়েস লোড করা ============ */
+  function loadVoices() {
+    const voices = speechSynthesis.getVoices();
+    if (voices.length === 0) return;
+
+    // বাংলা → হিন্দি female → হিন্দি → যেকোনো female → প্রথম
+    femaleVoice = 
+      voices.find(v => v.lang.startsWith('bn')) ||
+      voices.find(v => v.lang.startsWith('hi') && /female/i.test(v.name)) ||
+      voices.find(v => v.lang.startsWith('hi')) ||
+      voices.find(v => /female|aria|jenny|samantha|zira/i.test(v.name)) ||
+      voices[0];
+
+    console.log('✅ Voice:', femaleVoice?.name, '|', femaleVoice?.lang);
   }
 
-  if (typeof speechSynthesis !== 'undefined') {
-    speechSynthesis.onvoiceschanged = () => { femaleVoice = pickBestVoice(); };
-    setTimeout(() => { femaleVoice = pickBestVoice(); }, 100);
-    setTimeout(() => { femaleVoice = pickBestVoice(); }, 800);
+  speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+  setTimeout(loadVoices, 200);
+  setTimeout(loadVoices, 800);
+  setTimeout(loadVoices, 1500);
+
+  /* ============ অডিও আনলক (Chrome Android ফিক্স) ============ */
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    // খালি কথা বলিয়ে audio context চালু করা
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0.01;
+    speechSynthesis.speak(u);
+    console.log('🔓 Audio unlocked');
   }
 
+  /* ============ কথা বলা ============ */
   function speak(text, onEnd) {
     if (!('speechSynthesis' in window)) { if (onEnd) onEnd(); return; }
+
+    // আগের কথা বন্ধ
     speechSynthesis.cancel();
 
-    const utter = new SpeechSynthesisUtterance(text);
-    if (!femaleVoice) femaleVoice = pickBestVoice();
-    if (femaleVoice) utter.voice = femaleVoice;
-    utter.lang = femaleVoice?.lang || 'bn-BD';
-    utter.pitch = 1.05;
-    utter.rate = 1.02;
-    utter.volume = 1;
+    // ছোট delay (Android-এ জরুরি)
+    setTimeout(() => {
+      const u = new SpeechSynthesisUtterance(text);
 
-    voiceCaption.classList.add('on');
-    voiceCaption.textContent = text;
+      if (!femaleVoice) loadVoices();
+      if (femaleVoice) {
+        u.voice = femaleVoice;
+        u.lang = femaleVoice.lang;
+      } else {
+        u.lang = 'bn-IN';
+      }
 
-    utter.onend = () => { if (onEnd) onEnd(); };
-    utter.onerror = () => { if (onEnd) onEnd(); };
-    speechSynthesis.speak(utter);
+      u.pitch = 1.1;
+      u.rate = 0.95;
+      u.volume = 1;
+
+      voiceCaption.classList.add('on');
+      voiceCaption.textContent = text;
+
+      u.onend = () => { if (onEnd) onEnd(); };
+      u.onerror = (e) => {
+        console.error('TTS error:', e);
+        if (onEnd) onEnd();
+      };
+
+      speechSynthesis.speak(u);
+      console.log('🔊 Speaking:', text);
+    }, 250);
   }
 
-  /* ===== ভয়েস শোনা ===== */
+  /* ============ ভয়েস শোনা ============ */
   function startListening() {
     if (!isVoiceActive) return;
 
@@ -306,8 +328,6 @@
       voiceCaption.textContent = finalText || interim || 'শুনছি...';
     };
 
-    recognition.onerror = (e) => { console.log('Rec error:', e.error); };
-
     recognition.onend = () => {
       if (!isVoiceActive) return;
       if (finalText.trim()) {
@@ -320,39 +340,34 @@
     try { recognition.start(); } catch (e) { console.log(e); }
   }
 
+  /* ============ AI উত্তর ============ */
   function respondToUser(text) {
     const lower = text.toLowerCase();
     let reply = '';
 
-    if (/হ্যালো|হাই|hello|hi|নমস্কার|সালাম/.test(lower)) {
+    if (/হ্যালো|হাই|hello|hi|নমস্কার/.test(lower)) {
       reply = 'হ্যালো! আমি মাইরা। কেমন আছেন?';
     }
-    else if (/কেমন আছ|how are you/.test(lower)) {
+    else if (/কেমন আছ|how are/.test(lower)) {
       reply = 'আমি ভালো আছি! আপনি কেমন আছেন?';
     }
-    else if (/নাম|name|তুমি কে|কে তুমি/.test(lower)) {
-      reply = 'আমার নাম মাইরা। আমি আপনার ভয়েস অ্যাসিস্ট্যান্ট।';
+    else if (/নাম|name|তুমি কে/.test(lower)) {
+      reply = 'আমার নাম মাইরা।';
     }
-    else if (/সময়|time|কত সময়/.test(lower)) {
-      const now = new Date();
-      reply = `এখন ${now.getHours()}টা ${now.getMinutes()} মিনিট।`;
+    else if (/সময়|time/.test(lower)) {
+      const n = new Date();
+      reply = `এখন ${n.getHours()}টা ${n.getMinutes()} মিনিট।`;
     }
     else if (/ধন্যবাদ|thank/.test(lower)) {
       reply = 'আপনাকে স্বাগতম!';
     }
-    else if (/বাই|bye|বিদায়|goodbye/.test(lower)) {
+    else if (/বাই|bye|বিদায়/.test(lower)) {
       reply = 'বিদায়! আবার কথা হবে।';
       speak(reply, () => setTimeout(stopVoice, 800));
       return;
     }
     else {
-      const responses = [
-        `আপনি বললেন: ${text}। আমি বুঝেছি।`,
-        `${text} — এটা আমি শুনলাম।`,
-        `আপনি ${text} বলেছেন, তাই না?`,
-        `বুঝেছি। আপনি ${text} নিয়ে কথা বলছেন।`
-      ];
-      reply = responses[Math.floor(Math.random() * responses.length)];
+      reply = `আপনি বললেন: ${text}।`;
     }
 
     speak(reply, () => {
@@ -360,23 +375,28 @@
     });
   }
 
+  /* ============ ভয়েস চালু ============ */
   function startVoice() {
+    unlockAudio();
+
     isVoiceActive = true;
     orbWrapper.classList.add('active');
     voiceBtn.classList.add('active');
     voiceCaption.classList.add('on');
     voiceCaption.textContent = '';
 
-    speak('হ্যালো! আমি মাইরা। বলুন কী করতে চান।', () => {
-      if (isVoiceActive) setTimeout(startListening, 400);
-    });
+    setTimeout(() => {
+      speak('হ্যালো! আমি মাইরা। বলুন কী করতে চান।', () => {
+        if (isVoiceActive) setTimeout(startListening, 400);
+      });
+    }, 400);
   }
 
+  /* ============ ভয়েস বন্ধ ============ */
   function stopVoice() {
     isVoiceActive = false;
     if (recognition) { try { recognition.stop(); } catch(e) {} }
-    if ('speechSynthesis' in window) speechSynthesis.cancel();
-
+    speechSynthesis.cancel();
     voiceCaption.classList.remove('on');
     voiceCaption.textContent = '';
     orbWrapper.classList.remove('active');
@@ -388,6 +408,7 @@
     else startVoice();
   });
 
+  /* ============ মেসেজ ============ */
   function autoResize() {
     inputBox.style.height = 'auto';
     inputBox.style.height = Math.min(inputBox.scrollHeight, 120) + 'px';
@@ -405,6 +426,8 @@
   function sendMessage() {
     const t = inputBox.value.trim();
     if (!t) return;
+
+    unlockAudio();
     addMessage(t, 'user');
     inputBox.value = '';
     inputBox.style.height = 'auto';
@@ -416,6 +439,7 @@
       speak(reply);
     }, 300);
   }
+
   sendBtn.addEventListener('click', sendMessage);
   inputBox.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -423,11 +447,7 @@
       sendMessage();
     }
   });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isVoiceActive) stopVoice();
-  });
 </script>
 
 </body>
-   </html>
+       </html>
