@@ -213,9 +213,6 @@
   </div>
 
 <script>
-  /* ⚠️ এখানে পরে আপনার Vercel URL বসাবেন */
-  const TTS_SERVER = '/api/tts';
-
   const inputBox = document.getElementById('inputBox');
   const sendBtn = document.getElementById('sendBtn');
   const messages = document.getElementById('messages');
@@ -225,45 +222,58 @@
 
   let recognition = null;
   let isVoiceActive = false;
-  let currentAudio = null;
 
-  async function speak(text, onEnd) {
+  /* ===== ফ্রি Web Speech API কণ্ঠ ===== */
+  let femaleVoice = null;
+
+  function pickBestVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    const prefs = [
+      'Microsoft Aria Online (Natural)',
+      'Microsoft Jenny Online (Natural)',
+      'Microsoft Michelle Online (Natural)',
+      'Microsoft Ana Online (Natural)',
+      'Google UK English Female',
+      'Google US English',
+      'Samantha', 'Karen', 'Moira', 'Tessa'
+    ];
+    for (const name of prefs) {
+      const f = voices.find(v => v.name === name);
+      if (f) return f;
+    }
+    const bn = voices.find(v => v.lang.startsWith('bn'));
+    if (bn) return bn;
+    const female = voices.find(v => /female|zira|samantha/i.test(v.name));
+    return female || voices[0];
+  }
+
+  if (typeof speechSynthesis !== 'undefined') {
+    speechSynthesis.onvoiceschanged = () => { femaleVoice = pickBestVoice(); };
+    setTimeout(() => { femaleVoice = pickBestVoice(); }, 100);
+    setTimeout(() => { femaleVoice = pickBestVoice(); }, 800);
+  }
+
+  function speak(text, onEnd) {
+    if (!('speechSynthesis' in window)) { if (onEnd) onEnd(); return; }
+    speechSynthesis.cancel();
+
+    const utter = new SpeechSynthesisUtterance(text);
+    if (!femaleVoice) femaleVoice = pickBestVoice();
+    if (femaleVoice) utter.voice = femaleVoice;
+    utter.lang = femaleVoice?.lang || 'bn-BD';
+    utter.pitch = 1.05;
+    utter.rate = 1.02;
+    utter.volume = 1;
+
     voiceCaption.classList.add('on');
     voiceCaption.textContent = text;
 
-    try {
-      const response = await fetch(TTS_SERVER, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text, voice: 'nova' })
-      });
-
-      if (!response.ok) throw new Error('TTS failed');
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      if (currentAudio) {
-        currentAudio.pause();
-        URL.revokeObjectURL(currentAudio.src);
-      }
-
-      currentAudio = new Audio(audioUrl);
-      currentAudio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
-        if (onEnd) onEnd();
-      };
-      currentAudio.onerror = () => {
-        if (onEnd) onEnd();
-      };
-      await currentAudio.play();
-    } catch (err) {
-      console.error('TTS error:', err);
-      voiceCaption.textContent = 'কণ্ঠ বাজানো যায়নি';
-      if (onEnd) onEnd();
-    }
+    utter.onend = () => { if (onEnd) onEnd(); };
+    utter.onerror = () => { if (onEnd) onEnd(); };
+    speechSynthesis.speak(utter);
   }
 
+  /* ===== ভয়েস শোনা ===== */
   function startListening() {
     if (!isVoiceActive) return;
 
@@ -296,9 +306,7 @@
       voiceCaption.textContent = finalText || interim || 'শুনছি...';
     };
 
-    recognition.onerror = (e) => {
-      console.log('Rec error:', e.error);
-    };
+    recognition.onerror = (e) => { console.log('Rec error:', e.error); };
 
     recognition.onend = () => {
       if (!isVoiceActive) return;
@@ -367,7 +375,7 @@
   function stopVoice() {
     isVoiceActive = false;
     if (recognition) { try { recognition.stop(); } catch(e) {} }
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
 
     voiceCaption.classList.remove('on');
     voiceCaption.textContent = '';
@@ -422,4 +430,4 @@
 </script>
 
 </body>
-  </html>
+   </html>
